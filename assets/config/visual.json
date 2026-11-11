@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "referenceUiSize": [
+    360,
+    800
+  ],
+  "referenceRects": {
+    "hud": [
+      12,
+      10,
+      348,
+      84
+    ],
+    "worldViewport": [
+      0,
+      94,
+      360,
+      694
+    ],
+    "status": [
+      12,
+      698,
+      348,
+      733
+    ],
+    "touch": [
+      12,
+      744,
+      348,
+      792
+    ],
+    "touchHitArea": [
+      0,
+      736,
+      360,
+      800
+    ]
+  },
+  "colors": {
+    "background": "#08111E",
+    "world": "#0A1525",
+    "surface": "#142237",
+    "surfaceRaised": "#1B304A",
+    "textPrimary": "#EAF3FF",
+    "textSecondary": "#9BB3CB",
+    "cyan": "#45D5F3",
+    "mint": "#48DEAC",
+    "yellow": "#FFC65A",
+    "error": "#FF836A",
+    "bonus": "#D878EF",
+    "wall": "#73859A",
+    "hp2": "#F5A25B",
+    "hp3": "#F47F9A",
+    "ballCore": "#F6FCFF",
+    "ballHalo": "#18495B",
+    "paddle": "#087D9F"
+  },
+  "themes": {
+    "amber": "#D9A853",
+    "coral": "#FF876F",
+    "violet": "#A874E6",
+    "azure": "#50BAF2",
+    "mint": "#49CAAF",
+    "gold": "#E8C66E"
+  },
+  "units": {
+    "brickGapWorld": 0.03,
+    "ballHaloMaxScale": 1.5,
+    "bonusVisualSizeWorld": [
+      1.6,
+      0.9
+    ],
+    "bonusHitboxSizeWorld": [
+      0.8,
+      0.4
+    ]
+  },
+  "effects": {
+    "brickHitFlashMs": 65,
+    "brickDestroyFlashMs": 95,
+    "bonusPickupFlashMs": 160,
+    "paddleHitFlashMs": 75,
+    "winOverlayFadeMs": 180,
+    "maxImpactParticlesPerDisplayFrame": 24
+  }
+}

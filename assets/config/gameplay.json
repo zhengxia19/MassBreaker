@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "simulation": {"fixedHz": 120, "maxContactsPerBallStep": 24, "timeEpsilon": 0.00001, "separationEpsilon": 0.0001},
+  "world": {"width": 24, "height": 40, "gridColumns": 96, "gridRows": 160, "cellSize": 0.25},
+  "ball": {"radius": 0.17, "speed": 18.0, "maxActive": 1024, "launchAngleFromUpDeg": 0, "minVerticalComponent": 0.42},
+  "paddle": {"centerY": 38.0, "width": 4.5, "height": 0.35, "maxBounceFromUpDeg": 65.0},
+  "bonus": {"fallSpeed": 6.0, "width": 0.8, "height": 0.4, "extraBalls": 3, "fanAnglesFromUpDeg": [-18.0, 0.0, 18.0], "overflowScorePerBall": 50},
+  "session": {"initialLives": 3, "scoreByTile": {"1": 100, "2": 200, "3": 300, "B": 100}, "starsByRemainingLives": {"1": 1, "2": 2, "3": 3}},
+  "render": {"targetFps": 60, "maxHitSoundsPerDisplayFrame": 4}
+}

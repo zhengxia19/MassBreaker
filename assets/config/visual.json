@@ -81,6 +81,10 @@
     "bonusPickupFlashMs": 160,
     "paddleHitFlashMs": 75,
     "winOverlayFadeMs": 180,
-    "maxImpactParticlesPerDisplayFrame": 24
+    "maxImpactParticlesPerDisplayFrame": 24,
+    "maxLiveParticleGroups": 144,
+    "maxParticlesPerGroup": 4,
+    "maxParticleLifetimeMs": 95,
+    "maxTrailPointsPerBall": 4
   }
 }

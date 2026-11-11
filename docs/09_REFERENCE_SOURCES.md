@@ -15,6 +15,13 @@
 9. Android Gradle native build：<https://developer.android.com/studio/projects/gradle-external-native-builds.html>
 10. Tiled 编辑器与导出：<https://www.mapeditor.org/>、<https://doc.mapeditor.org/en/stable/reference/json-map-format/>；Tiled JSON 层字段 `offsetx/offsety` 明确为像素偏移，`x/y` 为 tile 单位偏移，本项目运行时 schema 不支持这些位移，导出必须拒绝。
 
+## 手机性能与功耗资料
+
+- [Android 功耗优化](https://developer.android.com/games/optimize/power)：目标帧率与显示刷新率、热状态和功耗策略。
+- [Android Frame Pacing](https://developer.android.com/games/sdk/frame-pacing)：OpenGL/Vulkan 呈现节奏与提交队列问题。
+- [Android Power Profiler](https://developer.android.com/studio/profile/power-profiler)：ODPM 设备支持及整机测量边界。
+- 仓库固定版本 SDL3 的 `include/SDL3/SDL_events.h`、`SDL_video.h`：阻塞事件等待与 swap interval API；实际跨平台行为须在 T02/T07 验证。
+
 ## 游戏参考素材
 
 用户提供的三段 MP4（参考素材未放进交付文档包）：

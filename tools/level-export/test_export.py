@@ -134,4 +134,70 @@ class LevelExportRegressionTests(unittest.TestCase):
             self.assertEqual(out.read_text(),'PRESERVE_EXISTING_OUTPUT')
 
 
+
+    def test_12_top_level_dimensions_reject_float_and_boolean(self):
+        values = (("width", 96.0), ("height", 160.0),
+                  ("tilewidth", 8.0), ("tileheight", 8.0),
+                  ("width", True), ("height", "160"))
+        for field, value in values:
+            with self.subTest(field=field, value=value):
+                src = copy.deepcopy(self.base)
+                src[field] = value
+                with self.assertRaisesRegex(LevelError, rf'{field} must be integer'):
+                    self.run_source(src)
+
+    def test_13_firstgid_must_be_positive_integer(self):
+        for gid in (0, -1, 1.0, True, "1"):
+            with self.subTest(gid=gid):
+                src = copy.deepcopy(self.base)
+                src['tilesets'][0]['firstgid'] = gid
+                with self.assertRaisesRegex(LevelError, 'firstgid must be positive integer'):
+                    self.run_source(src)
+
+    def test_14_shifted_firstgid_with_shifted_tiles_roundtrips(self):
+        src = copy.deepcopy(self.base)
+        src['tilesets'][0]['firstgid'] = 2
+        layer = self.layer(src, 'bricks')
+        layer['data'] = [gid + 1 if gid else 0 for gid in layer['data']]
+        self.assertEqual(self.run_source(src), self.run_source(copy.deepcopy(self.base)))
+
+    def test_15_nonzero_gid_below_firstgid_must_be_rejected(self):
+        src = copy.deepcopy(self.base)
+        src['tilesets'][0]['firstgid'] = 2
+        layer = self.layer(src, 'bricks')
+        layer['data'] = [gid + 1 if gid else 0 for gid in layer['data']]
+        index = next(i for i, gid in enumerate(layer['data']) if gid == 2)
+        layer['data'][index] = 1  # Nonzero but lower than firstgid: never empty.
+        with self.assertRaisesRegex(LevelError, 'gid 1 outside tileset range'):
+            self.run_source(src)
+
+    def test_16_gid_above_tileset_and_unsupported_tile_rejected(self):
+        for tilecount, badgid, error in ((5, 6, 'outside tileset range'),
+                                          (6, 6, 'unsupported tile gid')):
+            with self.subTest(tilecount=tilecount, badgid=badgid):
+                src = copy.deepcopy(self.base)
+                src['tilesets'][0]['tilecount'] = tilecount
+                layer = self.layer(src, 'bricks')
+                index = next(i for i, gid in enumerate(layer['data']) if gid == 1)
+                layer['data'][index] = badgid
+                with self.assertRaisesRegex(LevelError, error):
+                    self.run_source(src)
+
+    def test_17_cli_invalid_gid_does_not_clobber_existing_output(self):
+        src = copy.deepcopy(self.base)
+        src['tilesets'][0]['firstgid'] = 2
+        layer = self.layer(src, 'bricks')
+        layer['data'] = [gid + 1 if gid else 0 for gid in layer['data']]
+        layer['data'][next(i for i, gid in enumerate(layer['data']) if gid == 2)] = 1
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td); inp = p/'bad_gid.tmj'; out = p/'existing.json'
+            inp.write_text(json.dumps(src), encoding='utf8')
+            out.write_text('DO_NOT_OVERWRITE', encoding='utf8')
+            result = subprocess.run([sys.executable, str(HERE/'export.py'),
+                                      '--input',str(inp),'--output',str(out)],
+                                     capture_output=True,text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('gid 1 outside tileset range', result.stderr)
+            self.assertEqual(out.read_text(encoding='utf8'), 'DO_NOT_OVERWRITE')
+
 if __name__=='__main__':unittest.main()

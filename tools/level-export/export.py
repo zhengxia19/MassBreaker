@@ -100,13 +100,20 @@ def convert(path):
     src=json.loads(Path(path).read_text(encoding='utf-8'))
     tag=Path(path).name
     require(src.get('orientation')=='orthogonal' and src.get('infinite') is False,f'{tag}: finite orthogonal required')
-    require((src.get('width'),src.get('height'),src.get('tilewidth'),src.get('tileheight'))==(GRID_W,GRID_H,TILE_PX,TILE_PX),
-            f'{tag}: expected 96x160 with 8x8 source tiles')
+    # Python regards 96 == 96.0 (and True == 1) as equal; Tiled map
+    # dimensions must be JSON integer values, not merely numerically equal.
+    expected_dimensions = {'width': GRID_W, 'height': GRID_H,
+                           'tilewidth': TILE_PX, 'tileheight': TILE_PX}
+    for field, expected in expected_dimensions.items():
+        actual = src.get(field)
+        require(type(actual) is int and actual == expected,
+                f'{tag}: {field} must be integer {expected}; got {actual!r}')
     tilesets=src.get('tilesets')
     require(isinstance(tilesets,list) and len(tilesets)==1,f'{tag}: expected exactly one tileset')
     tile=tilesets[0]
-    require(type(tile.get('firstgid')) is int and type(tile.get('tilecount')) is int and tile['tilecount']>=5,
-            f'{tag}: tileset firstgid and tilecount invalid')
+    require(type(tile.get('firstgid')) is int and tile['firstgid'] >= 1
+            and type(tile.get('tilecount')) is int and tile['tilecount'] >= 5,
+            f'{tag}: tileset firstgid must be positive integer and tilecount >= 5 integer')
     first=tile['firstgid']
     layers=src.get('layers',[])
     require(isinstance(layers, list), f'{tag}: layers must be array')
@@ -129,8 +136,15 @@ def convert(path):
     flat=[]
     for i,gid in enumerate(data):
         require(type(gid) is int and gid >= 0 and (gid & FLIP_MASK)==0,f'{tag}: invalid/flip gid at {i%GRID_W},{i//GRID_W}')
-        local=0 if gid==0 else gid-first+1
-        require(local in CHAR_BY_LOCAL,f'{tag}: unrecognized gid {gid} at {i%GRID_W},{i//GRID_W}')
+        if gid == 0:
+            local = 0  # Only the global GID zero represents an empty tile.
+        else:
+            require(first <= gid < first + tile['tilecount'],
+                    f'{tag}: gid {gid} outside tileset range '
+                    f'[{first}, {first + tile["tilecount"]}) at {i%GRID_W},{i//GRID_W}')
+            local = gid - first + 1
+            require(local in CHAR_BY_LOCAL and local != 0,
+                    f'{tag}: unsupported tile gid {gid} (local {local}) at {i%GRID_W},{i//GRID_W}')
         flat.append(CHAR_BY_LOCAL[local])
     rows=[''.join(flat[i*GRID_W:(i+1)*GRID_W]) for i in range(GRID_H)]
     objs=marker.get('objects',[])

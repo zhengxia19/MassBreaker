@@ -1,6 +1,6 @@
 # 构建、运行与 Android 发布规范
 
-**编号** MB-BUILD-001｜**版本** 1.0｜**状态** 规划中的开发操作规程，非已完成构建记录
+**编号** MB-BUILD-001｜**状态** 规划中的开发操作规程，非已完成构建记录
 
 ## 1. 版本基线与工具
 
@@ -16,7 +16,7 @@
 | 设备 | Android `arm64-v8a`；`minSdk 26` 为本项目选择 |
 | 编辑器 | Tiled 1.12.2 |
 
-**版本管理**：正式仓库建立时固定 AGP、Gradle wrapper、NDK、CMake、SDL3 三库版本；不要使用 `latest`、master 无提交号等浮动依赖。正式发布时 `targetSdk` 根据当时适用的 Google Play 要求锁定，不在设计文件中凭空预设未来商店政策。
+**版本管理**：T01/T02 固定 AGP、Gradle wrapper、NDK、CMake 版本；SDL3 已锁定源码提交，SDL3_ttf/SDL3_mixer 在 T12 接入时锁定版本；不要使用 `latest`、master 无提交号等浮动依赖。正式发布时 `targetSdk` 根据当时适用的 Google Play 要求锁定，不在设计文件中凭空预设未来商店政策。
 
 ## 2. 目录与目标
 
@@ -27,7 +27,10 @@ MassBreaker/
 ├── core/                     # 与平台无关的 C++ 引擎及玩法
 ├── desktop/main.cpp          # Windows 启动入口
 ├── android/                  # SDL3 官方 Android 工程模板派生
-├── third_party/{SDL,SDL_ttf,SDL_mixer}/
+├── third_party/
+│   ├── SDL3/                  # SDL3 固定版本源码（T01）
+│   ├── SDL3_ttf/              # 字体依赖（T12 引入）
+│   └── SDL3_mixer/            # 音频依赖（T12 引入）
 ├── assets/{levels,shaders,audio,images,fonts}/
 ├── levels-src/               # Tiled 编辑源文件
 ├── tools/                    # 关卡转换、生成和检查
@@ -38,7 +41,7 @@ MassBreaker/
 
 ## 3. Windows 本地构建
 
-前提：配置好 VS2022 C++、CMake、Git，固定版本依赖已放入 `third_party/` 或作为 Git 子模块检出。
+前提：配置好 VS2022 C++、CMake、Git，固定版本 SDL3 依赖放入 `third_party/SDL3/`（也可作为同名 Git 子模块检出）；T12 再引入 `third_party/SDL3_ttf/` 和 `third_party/SDL3_mixer/`。当前仓库已包含 `third_party/SDL3/` 子模块，检出 tag `release-3.4.20`，提交 `f00dc919ca35b9756316e86c4777392de442f9b2`。T01 的 CMake 必须引用该实际目录；字体与音频库尚未引入。
 
 开发仓库达到 T01 后，目标使用如下命令：
 
@@ -48,9 +51,9 @@ cmake --build build/windows --config Debug
 # 可执行文件预期在生成目录对应的 Debug 子目录
 ```
 
-这些是本项目计划采用的命令形式，**目前交付仅包含设计文档，尚无可执行的 CMakeLists.txt**。工具链按项目第一次实编译结果将准确路径写入仓库 README。
+这些是本项目计划采用的命令形式，**当前仓库包含文档、关卡资产、Python 工具及 SDL3 子模块，尚无项目顶层 CMakeLists.txt**。工具链按项目第一次实编译结果将准确路径写入仓库 README。
 
-开发中保留 Windows 桌面入口，以快速调整关卡、重现碰撞问题和观察 FPS。桌面入口使用 OpenGL 3.3 Core，Android 使用 OpenGL ES 3.0，两者共享业务规则及 GLSL 逻辑。
+开发中保留 Windows 桌面入口，以快速调整关卡、重现碰撞问题和观察 FPS。桌面入口使用 OpenGL 3.3 Core，Android 使用 OpenGL ES 3.0，两者共享业务规则及 GLSL 逻辑。Windows 仅为开发/调试端，不另做桌面安装器、商店发行或完整设备性能矩阵。
 
 ## 4. Android 工程集成
 
@@ -71,6 +74,8 @@ adb logcat -s SDL:V MassBreaker:V
 ```
 
 Debug 构建以后，正式版按项目签名配置执行 `assembleRelease` / `bundleRelease`；签名密钥、密码不得提交 Git。上面日志标签示例需要与项目实际实现一致，**不是现成可用的固定标签**。
+
+Android 平台适配层在 T02/T07 接入唯一帧节奏路径：请求与 targetFps 匹配的刷新率，验证实际模式；采用 Swappy 时固定依赖版本并核验与 SDL/EGL 交换入口的兼容性，不再并列调用另一条交换/限帧路径。不支持的刷新率/热 API 功能检测后回退，保持 minSdk 26；热状态监听不使用高频轮询。具体行为及测试见 [算法 §3.3/§16](12_CORE_ALGORITHMS.md)。
 
 ## 5. 应用标识与版本
 

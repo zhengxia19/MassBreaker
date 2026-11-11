@@ -1,4 +1,4 @@
-# 关卡格式、编辑规范与校验工具（V1.3.1）
+# 关卡格式、编辑规范与校验工具
 
 **编号：** MB-DATA-004｜**状态：** Schema V1 冻结；资源和导出／验证脚本已同步更新
 
@@ -6,7 +6,11 @@
 
 **Tiled `.tmj`（可编辑唯一源） → Python 导出器 → `assets/levels/Lxxx.json`（游戏运行唯一输入） → `BrickField`。** `design/levels/Lxxx.png` 是从同一个运行时 JSON 生成的设计预览图，不是碰撞数据。禁止手工修改 JSON 后不回写 Tiled。
 
-地图 `96×160` 正交有限图，Tiled tile 为 `8×8` 编辑像素，映射到 `24×40` 世界，单格 0.25。**地图顶层 `width/height` 与砖层自身 `bricks.width/height` 必须分别都是严格整数 `96/160`。即使砖层扁平 `data` 长度仍为 15,360，也不得接受 48×320、160×96 等错误的砖层尺寸。****源地图所有顶层图层（含 bricks、markers、decor）必须满足 `offsetx=offsety=0`、`x=y=0`、`parallaxx=parallaxy=1`（缺省取这些值）；V1 禁止 group 层与组合变换。出现任何非零偏移时导出器必须直接报错，不允许静默丢弃。**物理原点左上、x 向右、y 向下。Tiled `bricks` Tile Layer 为必需，`markers` Object Layer 为必需（恰有一个 point `ball_spawn` 与一个 point `paddle`）；`decor` 为可选且不参与碰撞。
+地图 `96×160` 正交有限图，Tiled tile 为 `8×8` 编辑像素，映射到 `24×40` 世界，单格 0.25。**地图顶层 `width/height` 与砖层自身 `bricks.width/height` 必须分别都是严格整数 `96/160`。即使砖层扁平 `data` 长度仍为 15,360，也不得接受 48×320、160×96 等错误的砖层尺寸。**
+
+**源地图所有顶层图层（含 bricks、markers、decor）必须满足 `offsetx=offsety=0`、`x=y=0`、`parallaxx=parallaxy=1`（缺省取这些值）；V1 禁止 group 层与组合变换。出现任何非零偏移时导出器必须直接报错，不允许静默丢弃。**物理原点左上、x 向右、y 向下。Tiled `bricks` Tile Layer 为必需，`markers` Object Layer 为必需（恰有一个 point `ball_spawn` 与一个 point `paddle`）；`decor` 为可选且不参与碰撞。
+
+顶层 `tilewidth/tileheight` 也必须是严格整数 `8/8`。整数尺寸不接受浮点数、布尔值或字符串。`bricks.data` 必须为未压缩整数数组且长度为 15,360；长度检查不能代替砖层自身宽高检查。图层变换值须为有限数；缺省为零偏移和单位视差，不支持嵌套 group。
 
 ## 2. 字符与唯一物理语义
 
@@ -20,6 +24,8 @@
 | 5 | `B` | 1 | 是 | 击破产生可拾取 `+3` 道具 |
 
 ¹ 表中 1–5 为当前 tileset `firstgid=1` 的 GID。导出器按 firstgid 计算 local tile，禁止对任意 GID 直接硬编码为字符；不支持 Flip GID（遇到明确报错）。
+
+仅支持一个 tileset。`firstgid` 为正整数，`tilecount` 为不少于 5 的整数；GID 必须为非负整数且无 Flip 标志。只有全局 GID `0` 表示空格；非零 GID 必须满足 `firstgid <= gid < firstgid + tilecount`，再按 `local = gid-firstgid+1` 映射到 1–5。例如 `firstgid=2,gid=1` 必须报错；正确整体平移的 GID 应导出等价网格。
 
 ## 3. 运行时 JSON Schema V1（完整实例）
 
@@ -70,27 +76,11 @@ python tools/level-export/render.py --dir assets/levels --out design/levels
 
 所有 `export/validate/geometry/build_manifest` 仅用 Python 标准库；`render.py` 使用 Pillow，仅在开发机安装，不打包进 Android。导出失败必须非零退出，禁止 `assert` 作为唯一校验。`manifest.json` 从实际资源重新统计，不手写会过期的数量。
 
-## 6. 文件改动与内容版本
+## 6. 资源维护与回归
 
 - 修改关卡必须先改 `levels-src/Lxxx.tmj`，再更新运行时 JSON、manifest 和对应 PNG；`examples/level_l001.json` 应与正式 L001 完全一致。
 - 资源统一通过源控制记录；通过 `validate.py --source` 执行一致性回归。额外执行 `python -m unittest discover -s tools/level-export -p "test_*.py" -v`，检查 `bricks/markers` 的 `offsetx/offsety=8`、`bricks` 异常尺寸（等长 data 仍需报错）及其他非法变换均报错（`LevelError`、CLI 非零退出）。新增砖种/修改坐标语义需提升 schemaVersion，并同步更新导出器、C++ 加载器和单测。
 - 发版前 `assets/levels/` 和 `assets/config/` 应为 APK 的只读资源，客户端不得写回；进度写入应用私有目录。
-- 设计团队可用 Tiled 实际编辑；本包仅验证 JSON/数据转换，**没有声称在 Tiled GUI 内逐个操作了30张地图**。
-
-## 7. Tiled 图层偏移问题的固定处理原则
-
-Tiled 图层的 `offsetx` / `offsety` 是**像素偏移**，不是注释；标记层偏移会影响球/挡板位置，砖块层偏移会改变视觉与碰撞网格的对应关系。当前运行时 JSON 的坐标结构**没有表达图层平移的字段**，因此 V1.3 选择更简单且安全的方案：
-
-1. 导出器读取所有顶层图层，执行 `validate_layer_transform()`；非零 `offsetx/offsety`、`x/y` 或非默认 parallax 即明确报出图层名、字段和值；`group` 层直接拒绝。
-2. **先完整校验源图，再写输出 JSON**；错误导出命令非零退出，原有正式资源不被覆盖。
-3. 恢复为所有变换为零后重新导出；`.tmj → JSON → 预览` 一致性由 `validate.py --source` 保障。
-4. 任何未来需要支持非零偏移的需求必须新立 schema 变更并同步 JSON 坐标转换、物理加载器与预览工具，不能偷偷忽略字段。
-
-回归文件：[`tools/level-export/test_export.py`](../tools/level-export/test_export.py)。
-
-## 8. V1.3.1 砖层尺寸缺陷修正（编辑关卡前立即生效）
-
-- `export.py` 在读取 `bricks.data` 前，分别读取 `bricks.width` / `bricks.height`，要求两者的 Python 类型都是 `int`（不接受 `bool`、字符串、浮点数），且严格等于 `96/160`。
-- 图层尺寸与顶层地图尺寸分别检查；`len(data)==15360` 只是独立的附加条件，绝不替代尺寸检查。错误示例：`48×320`、`160×96`、`96×159`，即使实际 data 个数正确仍须报错。
-- 当前 CLI 在 `convert()` 成功完成全部检查后才打开输出文件写入，异常时返回非零状态且不覆盖旧 JSON；`test_export.py` 增加该行为的回归测试。
-- 现有 30 关尺寸正常，**不需要重新设计关卡**；以后修改任何 `.tmj` 先执行工具回归。
+- 设计团队可用 Tiled 实际编辑；当前项目仅验证 JSON/数据转换，**没有声称在 Tiled GUI 内逐个操作了30张地图**。
+- 导出器先完成源图及运行时结构校验，再打开目标 JSON；非法偏移、尺寸、整数类型、firstgid 或 GID 必须报错并保留既有输出。运行时不支持图层平移，不能静默忽略 Tiled 变换。
+- [test_export.py](../tools/level-export/test_export.py) 的 18 项测试覆盖：正常源图、零变换、非零 offset/x/y/parallax/group、砖层等长异常尺寸、顶层浮点/布尔尺寸、firstgid 与 GID 边界、正确 GID 平移、CLI 失败保留输出，以及 30 关源数据一致性。

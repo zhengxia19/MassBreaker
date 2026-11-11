@@ -1,6 +1,7 @@
 # 界面与交互详细设计（UI / UX）
 
-**文档编号** MB-UI-010｜**版本** V1.3.1｜**适用** Android 竖屏 / Windows 调试端  
+**文档编号** MB-UI-010｜**适用** Android 竖屏 / Windows 调试端
+
 **状态** 可实施的界面规格与设计线框；**不是实际运行截图**。
 
 ## 1. 设计范围与导航
@@ -41,7 +42,7 @@ V1 页面：主页、关卡选择、游戏主界面、暂停面板、成功结�
 | `bg/base` | `#08111E` | 全屏深色背景 |
 | `surface/card` | `#142237` | 面板、菜单卡片 |
 | `surface/raised` | `#1B304A` | 二级按钮、设置控件 |
-| `text/primary` | `#EAF2FE` | 主文字 |
+| `text/primary` | `#EAF3FF` | 主文字；**以 `assets/config/visual.json.colors.textPrimary` 为唯一权威** |
 | `text/secondary` | `#9BB3CB` | 说明、次要信息 |
 | `accent/cyan` | `#45D5F3` | 主 CTA、挡板、暂停强调 |
 | `accent/yellow` | `#FFC65A` | 普通微砖、分数、星级 |
@@ -57,7 +58,7 @@ V1 页面：主页、关卡选择、游戏主界面、暂停面板、成功结�
 
 ## 4. 八种界面规格
 
-> **V1.3 可实施视觉基线**：[8 页细化总览](../design/ui/final/all_8_final_screens.png)、[真实 L003 微砖参考](../design/ui/final/03_gameplay.png)、[L028 多球参考](../design/ui/final/03_gameplay_multiball.png)。下方 8 张已改为新的 **V1.3 细化设计**；旧线框保留在 `design/ui/` 以便历史对照，但其连续填色不作为最终游戏画面标准。新参考图的砖/墙位置来自当前关卡 JSON，球位/HUD 可能为示意，不是运行截图。
+> **当前视觉基线**：[8 页设计总览](../design/ui/final/all_8_final_screens.png)、[L003 微砖参考](../design/ui/final/03_gameplay.png)、[L028 多球参考](../design/ui/final/03_gameplay_multiball.png)。砖/墙位置来自当前 JSON，球位与 HUD 为设计示意，不是运行截图。
 
 ### UI-01 首页
 
@@ -99,7 +100,7 @@ V1 页面：主页、关卡选择、游戏主界面、暂停面板、成功结�
 
 ![暂停](../design/ui/final/04_pause.png)
 
-- 游戏画面保持原状态并叠加深色半透明遮罩；面板包含 `继续游戏`、`重新开始`、`返回选关`。
+- 游戏画面保持原状态并叠加深色半透明遮罩；面板包含 `继续游戏`、`重新开始`、`返回选关`。`frame.currentTick.hud.pauseReason` 为 `SimulationOverload` 时在面板标题下显示“运行暂时跟不上，游戏已暂停”；普通用户暂停不显示此警示。暂停前积压时间不随 Resume 补算，画面保持已执行的最后一个完整物理步。
 - 点击“继续”由**独立的显示帧控制通道**立即将 `PAUSED` 还原为之前 `READY/PLAYING` 状态，清空本轮积累的物理时间，避免恢复时跳跃；不等待 fixed tick。重新开始和离开本关的确认弹窗优先拦截输入；确认后 `Retry/ExitToSelect` 也由控制通道立即执行。
 - Android 返回键在暂停面板执行“继续”，返回键在游戏中执行“暂停”。
 
@@ -108,14 +109,14 @@ V1 页面：主页、关卡选择、游戏主界面、暂停面板、成功结�
 ![成功结算](../design/ui/final/05_win.png)
 
 - 展示通关、星级（按剩余生命数）、得分、剩余生命、`下一关`、`重玩本关`、`关卡选择`。
-- 成绩持久化成功后再开放下一关跳转；存档失败显示重试提示而不是伪装保存成功。**T10 开发阶段通过可注入的 SaveResult 测试此状态规则；真实文件读写由 T11 完成，正式字体和视觉由 T12 完成。**
+- 成绩持久化成功后再开放下一关跳转；存档失败显示重试提示而不是伪装保存成功。**T11 可在 T03 后并行完成真实文件读写；T10 优先接入真实 SaveResult，尚未就绪时可注入结果验证状态规则。正式字体和视觉由 T12 完成。**
 - L030 完成后隐藏或改写 `下一关` 按钮为 `返回关卡`。
 
 ### UI-06 失败结算
 
 ![失败结算](../design/ui/final/06_lose.png)
 
-- 展示失败原因、得分、已破坏目标数量；仅 `重新挑战` / `选择关卡`。
+- 展示失败原因（V1 仅生命耗尽，固定文案 `生命耗尽`）、`frame.currentTick.hud.score` 和 **`已破坏 {destroyedTargets} / {initialTargets}`**；这两个目标数由 `GameSession::snapshot()` 提供。UI 禁止自行累计 `BrickDestroyed`、计算第三份统计或沿用旧关卡数据。仅 `重新挑战` / `选择关卡`。
 - 失败不回滚已解锁关卡；不强制观看广告或跳转外部页面。
 
 ### UI-07 设置
@@ -139,12 +140,33 @@ V1 页面：主页、关卡选择、游戏主界面、暂停面板、成功结�
 |---|---|
 | 没有存档 | 首页按钮显示“开始游戏”；L001 已解锁 |
 | 正在发球前 | 1 球附着挡板，操作区提示“点击发球” |
-| 道具被接住 | 屏幕显示 `+3 球` 的短提示；增加后活动球数即时更新 |
+| 道具被接住 | 道具牌仍标示其**标称** `+3`，但拾取后的奖励弹字严格由同 `ItemId` 的 `BallsSpawned.value` 与 `overflowScore` 决定：新增 3/2/1/0 球对应不同文案，不固定写 `+3 球`；HUD 球数与总分同时更新 |
+| 追赶超出预算 | 自动进入 `PAUSED` 并显示“运行暂时跟不上，游戏已暂停”，保留现有场景、生命与积分；提供继续、重新开始、返回选关，用户主动恢复后才继续物理 |
 | 多球增加 | HUD 显示实际活跃球数，数字使用紧凑格式且不闪烁 |
 | 游戏失去焦点 | 立刻暂停，不补偿后台时长 |
 | 存档写入失败 | 明确错误提示，允许重试保存，不伪造“已保存” |
 | 关卡 JSON 无法读取 | 可返回选关的错误页，并记录关卡 ID、错误码 |
 | 页面缩放 | 按安全区域重新布局，禁止将关卡裁切或按钮压进系统手势区 |
+
+### 5.1 实际奖励提示
+
+道具牌显示标称 `+3`；拾取时 `ItemCollected` 只通知道具消失，随后同 ItemId 的 `BallsSpawned` 决定结果提示。所有补分由核心写入总分，UI 不通过分数差额反推奖励。两张道具分别提示，不将标称数相加冒充真实新增。
+
+| `BallsSpawned.value` | `overflowScore` | 最终弹字（160ms） |
+|---:|---:|---|
+| 3 | 0 | `+3 球` |
+| 2 | 50 | `+2 球 · +50 分` |
+| 1 | 100 | `+1 球 · +100 分` |
+| 0 | 150 | `球数已满 · +150 分` |
+
+提示持续时间来自 `visual.json.effects.bonusPickupFlashMs`（默认 160ms）。安全暂停只使用既有暂停页；按 `frame.currentTick.hud.pauseReason` 显示原因，不增加页面或自行推断过载。
+
+### 5.2 静态页面与显示调度
+
+- READY 无输入不执行周期物理；拖动/轻点唤醒后在最近允许的显示工作处理一次准备步，手势规则不变。PLAYING 按固定物理步采样。
+- 菜单、暂停、结算和教程没有交互或动画时按需重绘；有限动画完成后阻塞等待。静止期间不闪烁提示文字、不用周期重排制造 dirty。
+- 控制、保存完成、窗口暴露与生命周期消息独立于呈现；没有周期绘制也要及时更新状态和安排一次必要重绘。后台停止图形提交，前台按当前状态恢复。
+- UI 只在文本/布局/样式实际改变时更新缓存；释放 FramePacket 后不得保留其中引用，必要反馈转入自有有界状态。
 
 ## 6. UI 事件及 C++ 对接
 
@@ -156,20 +178,25 @@ enum class ScreenId { Home, LevelSelect, Gameplay, Pause, Win, Lose, Settings, T
 // currentTick.hud 的类型为算法 §7 中的 SessionSnapshot。
 ```
 
-- UI 只读取 `FramePacket.currentTick.hud`（类型 `SessionSnapshot`）与本帧 `OrderedEvent`；不定义第二份 `HudSnapshot`，不直接访问 `BrickField` 可写状态。
+- UI 只读取 `FramePacket.currentTick.hud`（类型 `SessionSnapshot`）与本帧 `OrderedEvent`；失败页 `destroyedTargets/initialTargets` 必须由此快照直接提供。不定义第二份 `HudSnapshot`，不直接访问 `BrickField` 可写状态，也不按事件自行积累计数。
 - `UI::hitTest()` 与物理世界输入映射统一接收 SDL 安全区域变换后的坐标。
 - 页面转场和 `ControlCommand::Resume/Retry/Pause/ExitToSelect/Confirm/Cancel` 在**显示帧控制通道**触发，不依赖固定物理步；过场动效不得推进游戏物理时间。
 - 文案资源按 key 集中管理（先中文；后续语言扩展不应要求修改菜单逻辑）。
+- 公共事件名称、载荷及快照字段以 [算法 §7](12_CORE_ALGORITHMS.md) 为准；UI 不定义同义拾取事件。`SessionReset` 可在零 tick 帧交付；终态事件当帧切屏，不等待下一物理步。失球、通关或失败后不得继续执行旧累积时间。
+- 多 tick 事件按顺序一次消费；HUD 读取当前快照，物体绘制读取同一 FramePacket 中的球/板/道具状态。暂停、后台、重试和换关的插值及事件清理规则见算法 §3.4。
 
 ## 7. UI 分阶段验收清单（T10 / T11 / T12）
 
-**T10 — 页面与交互阶段验收（允许临时字体/模拟存档结果）：**
+**T10 — 页面与交互验收（真实资源/存档优先，未就绪时允许占位）：**
 
+- [ ] T08/T09 已完成；API-02、BONUS-01 使用真实挡板反射、拾取与增球事件，只有 SaveResult 可注入测试结果。CTRL-01..05 和 STAT-05 按规范通过。
+- [ ] PERF-01/02：READY 静止不 tick；静态页面无周期绘制，控件/系统重绘/保存完成可正常唤醒。
+- [ ] 过载暂停显示专用说明，零 tick Resume/Retry 生效；容量余量 3/2/1/0 的实际球数、补分与提示一致。
 - [ ] 8 个定义页面及状态均可达到；导航、返回键、模态优先级、拖动/发球输入不穿透。
-- [ ] 360×640、360×800 参考布局适配；HUD 与 `frame.currentTick.hud` 一致，L030 无“下一关”。
+- [ ] 360×640、360×800 参考布局适配；HUD 与 `frame.currentTick.hud` 一致，L030 无“下一关”；失败页使用核心 `initialTargets/destroyedTargets` 和 V1 固定原因 `生命耗尽`（`STAT-05`）。
 - [ ] 保存中、保存成功、保存失败三种状态由注入的 `SaveResult` 驱动；仅成功允许跳下一关；不声称真正已保存。
 
-**T11 — 真实存档与设置验收：**
+**T11 — 真实存档与设置验收（可与 T10 并行）：**
 
 - [ ] `SaveRepository` 实际文件读写、错误回退和重新启动恢复通过；保存失败不得放行下一关；设置真实持久化。
 
@@ -180,29 +207,8 @@ enum class ScreenId { Home, LevelSelect, Gameplay, Pause, Win, Lose, Settings, T
 
 **完整 UI 产品验收必须在 T11 与 T12 均完成后才能判定通过。**
 
-## 8. 图片索引
+## 8. 设计图与实现依据
 
-`design/ui/final/01_home.png` 至 `08_tutorial.png` 为**V1.3 细化参考稿**，由代码读取关卡资源绘制生成，不是运行结果，也不包含字体二进制。旧 `design/ui/` 根层 PNG 只作历史线框存档。正式游戏 UI 可遵循相同版式，用 SDL3_ttf 缓存文字、OpenGL 批量绘制通用控件。
+`design/ui/final/01_home.png` 至 `08_tutorial.png` 是八屏设计依据；游戏场景使用 L003，`03_gameplay_multiball.png` 使用 L028。砖/墙来自真实 JSON，球位和 HUD 为示意；图片不是运行输出，也不包含字体二进制。
 
-## 9. V1.3.1 UI 与核心事件契约
-
-- **命令分流**：`GameplayCommand::MovePaddle/Launch` 由 fixed tick 消费；`ControlCommand::Pause/Resume/Retry/ExitToSelect/Confirm/Cancel/AppSuspend` 在 SDL 事件分发后、累积器之前立即处理，即使 `PAUSED` 不运行 fixed tick 也能继续/重试。见 [`12_CORE_ALGORITHMS.md §3.1`](12_CORE_ALGORITHMS.md)。
-- `frame.currentTick.hud`（`SessionSnapshot`）的关卡、生命、分数、活动球数、目标数和 `awaitingLaunch` 是 HUD 唯一权威；UI 只展示，不自行减少目标或增加分数。
-- 事件由算法 §7.1 唯一定义，必须包含 `PaddleHit`、`ItemCollected`、`BallsSpawned`、`LifeLost`、`LevelWon`、`LevelLost` 和控制通道 `SessionReset`。按 tick 深拷贝、按显示帧一次消费；零 tick 的重试也能收到 `SessionReset`。**不得定义 `BonusCollected` 同义事件或自行创建 `frame.hud` 字段。**
-- READY 状态轻点发球的距离阈值为 `8` UI 单位；按下到抬起出现有效拖动则不发球。屏幕暂停按钮优先于控制区。
-- 界面与游戏世界的职责和生命周期接口，见 [12_CORE_ALGORITHMS.md](12_CORE_ALGORITHMS.md)。
-
-## 10. V1.3 设计稿与画面参数的实施入口
-
-旧 `design/ui/01_*.png` 至 `08_*.png` 保留为**历史线框图**，游戏画面含旧版连续填色，**禁止作为微砖渲染验收依据**。新 `design/ui/final/` 包含 8 页细化设计稿，`03_gameplay.png` 从 L003 运行时 JSON 真实绘制 96×160 微格，`03_gameplay_multiball.png` 从 L028 JSON 真实绘制砖阵；**球和 HUD 数值为摆放示例，非模拟输出**。
-
-- 完整色表、砖状态、精确视觉尺寸、掉落牌装饰尺寸、动画时序、叠层及验收见 [`14_VISUAL_DESIGN_AND_FEEDBACK.md`](14_VISUAL_DESIGN_AND_FEEDBACK.md)。画面参数唯一来源 [`visual.json`](../assets/config/visual.json)。
-- 360×800 参考中的世界视口为 `[0,94,360,694]`，HUD `[12,10,348,84]`，状态栏 `[12,698,348,733]`，操作区可视框 `[12,744,348,792]`，触摸命中 `[0,736,360,800]`；所有设备先映射 safeRect 再计算世界缩放和按钮命中。`visual.json` 中可直接读取这些参考矩形。
-- `PaddleRenderState`（位置、尺寸、风格）、`ItemRenderState`（位置、尺寸、类型）、`BallRenderState`、`SessionSnapshot` **共同组成** `FramePacket`，不可只画砖和球。相关插值和显示帧事件生命周期见 [`12_CORE_ALGORITHMS.md §3.4`](12_CORE_ALGORITHMS.md)。
-- 模态期间仅弹窗接收指针/Back，触发时取消底层当前拖动捕获；`Resume/Retry` 可在 0 fixed tick 的暂停帧完成。CTRL-01..05、FRAME-01..06、LOOP-01..04 和 API-01..02 随 T04/T07/T10 相关模块正常提交。
-
-## 11. V1.3.1 集成约束
-
-- `UI::consume()` 的唯一数据入口为 `ui.consume(frame.currentTick.hud, frame.events)`，`SessionSnapshot` 的键由算法文档 §7 定义；若想展示额外统计须先调整权威快照并同步测试，不得 UI 自造值。
-- 失球进入 READY、通关进入 WON、失败进入 LOST 后，主循环不得继续以旧 accumulator 执行后续 tick；这会直接影响暂停/结算页面的稳定性。UI 在当前显示帧接收末次事件并切屏，不能把事件消费依赖下一 fixed tick。
-- `T10` 只验收页面与交互；`T11` 验收真实保存成功门槛；`T12` 验收正式字体、声音和完整 UI 集成。
+视觉尺寸、色板、动效与叠层见 [14_VISUAL_DESIGN_AND_FEEDBACK.md](14_VISUAL_DESIGN_AND_FEEDBACK.md)，配置以 [visual.json](../assets/config/visual.json) 为准。运行时用 SDL3_ttf 缓存字形、OpenGL 批量绘制控件，正式字体及授权由 T12 落实。

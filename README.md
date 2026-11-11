@@ -11,6 +11,25 @@
 - 初始 1 球；**仅通过接到 B 砖掉落的 +3 道具新增球**；无播放加速、无球球碰撞、无联网。
 - 6 章 30 关、8 个页面，Tiled 源、运行时 JSON、预览图，首关从 320 个目标砖开始，后期最高 5,200 个。
 
+## 仓库与本机开发环境
+
+- **远程仓库：** `git@github.com:zhengxia19/MassBreaker.git`（GitHub，MIT 许可）。主分支为 `master`（见[工程规范](docs/08_ENGINEERING_RULES.md) §3），远端 `main` 与其保持同步。
+- **第三方子模块：** `third_party/SDL3` → <https://github.com/libsdl-org/SDL>，tag `release-3.4.20`（commit `f00dc919ca35b9756316e86c4777392de442f9b2`）。
+- **本机开发环境（记录于 2026-11-11）：**
+
+| 组件 | 本机实际版本 / 路径 |
+|---|---|
+| 编译器 | VS 2026 Build Tools 18.8.2，MSVC 工具集 14.51.36231，实测 `cl /std:c++20` 编译通过 |
+| Windows SDK | 10.0.26100 |
+| CMake / Ninja | VS 自带 4.3.1 / 1.13.2（`Common7\IDE\CommonExtensions\Microsoft\CMake\`）；Android 构建另可用 SDK 内置 CMake 3.22.1 |
+| Git | 2.49.0 |
+| Python | 3.14.6（`C:\Python314`），已装 Pillow 12.3 / numpy / shapely / lxml |
+| Android SDK | `D:\DevEnv\android-sdk`：platforms android-36 / 37.0 / 37.2、build-tools 36.0.0、NDK 28.2.13676358（r28c）、platform-tools（adb）、emulator |
+| JDK | `D:\DevEnv\tools\jdk-21`（OpenJDK 21.0.12 LTS） |
+| 尚未安装 | SDL3_ttf 3.2.2 / SDL3_mixer 3.2.4（按任务在 T12 接入）、Tiled 1.12.2（仅编辑关卡时需要） |
+
+> [构建规范](docs/06_BUILD_AND_RELEASE.md) §1 的"Visual Studio 2022"基线在本机以 VS 2026 Build Tools 落实：MSVC 工具集 14.51 完整支持 C++20，视为兼容基线。T01 首次实编译后按 06 §3 把实际构建命令与产物路径回写本节。
+
 ## 从哪里开始读
 
 | 文件 | 作用 |

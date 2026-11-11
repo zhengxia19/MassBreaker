@@ -51,7 +51,7 @@ cmake --build build/windows --config Debug
 # 可执行文件预期在生成目录对应的 Debug 子目录
 ```
 
-这些是本项目计划采用的命令形式，**当前仓库包含文档、关卡资产、Python 工具及 SDL3 子模块，尚无项目顶层 CMakeLists.txt**。工具链按项目第一次实编译结果将准确路径写入仓库 README。
+这些是本项目计划采用的命令形式，**当前仓库包含文档、关卡资产、Python 工具及 SDL3 子模块，尚无项目顶层 CMakeLists.txt**。本机工具链的实际版本与路径已记录在仓库 README「仓库与本机开发环境」一节；工具链按项目第一次实编译结果将准确构建命令和产物路径回写该节。
 
 开发中保留 Windows 桌面入口，以快速调整关卡、重现碰撞问题和观察 FPS。桌面入口使用 OpenGL 3.3 Core，Android 使用 OpenGL ES 3.0，两者共享业务规则及 GLSL 逻辑。Windows 仅为开发/调试端，不另做桌面安装器、商店发行或完整设备性能矩阵。
 
